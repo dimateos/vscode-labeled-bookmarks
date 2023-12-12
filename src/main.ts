@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { Group } from "./group";
 import {
     ExtensionContext,
@@ -22,6 +23,11 @@ import { BookmarManager } from './interface/bookmark_manager';
 export class Main implements BookmarkDataProvider, BookmarManager {
     public ctx: ExtensionContext;
     private treeViewRefreshCallback = () => { };
+
+    // file storage
+    public readonly savedBookmarksFileVersionKey = "fileVersion";
+    public readonly savedBookmarksFileVersionValue = "1.0";
+    public readonly savedBookmarksFilePath = vscode.workspace.workspaceFolders?vscode.workspace.workspaceFolders[0].uri.path + "/.vscode/vsc-labeled-bookmarks.json":undefined;
 
     public readonly savedBookmarksKey = "vscLabeledBookmarks.bookmarks";
     public readonly savedGroupsKey = "vscLabeledBookmarks.groups";
@@ -125,6 +131,19 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         this.ctx.workspaceState.update(this.savedHideAllKey, this.hideAll);
 
         this.updateStatusBar();
+
+        // save to file
+        if (this.savedBookmarksFilePath) {
+            let obj: Record<string, any> = {};
+            obj[this.savedBookmarksFileVersionKey] = this.savedBookmarksFileVersionValue;
+            obj[this.savedGroupsKey] = serializedGroups;
+            obj[this.savedBookmarksKey] = serializedBookmarks;
+            obj[this.savedActiveGroupKey] = this.activeGroup.name;
+            obj[this.savedHideInactiveGroupsKey] = this.hideInactiveGroups;
+            obj[this.savedHideAllKey] = this.hideAll;
+            let json = JSON.stringify(obj);
+            fs.writeFileSync(this.savedBookmarksFilePath, json);
+        }
     }
 
     public handleDecorationRemoved(decoration: TextEditorDecorationType) {
@@ -1488,6 +1507,26 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     }
 
     private restoreSavedState() {
+        // check if labeled file bookmarks are present
+        if (this.savedBookmarksFilePath) {
+            // vscode.window.showInformationMessage(this.savedBookmarksFilePath);
+            if (fs.existsSync(this.savedBookmarksFilePath)) {
+                let data = fs.readFileSync(this.savedBookmarksFilePath, 'utf8');
+                let obj = JSON.parse(data);
+                // verify and load back to workspaceState
+                if (obj[this.savedBookmarksFileVersionKey] === this.savedBookmarksFileVersionValue) {
+                    this.ctx.workspaceState.update(this.savedBookmarksKey, obj[this.savedBookmarksKey]);
+                    this.ctx.workspaceState.update(this.savedGroupsKey, obj[this.savedGroupsKey]);
+                    this.ctx.workspaceState.update(this.savedActiveGroupKey, obj[this.savedActiveGroupKey]);
+                    this.ctx.workspaceState.update(this.savedHideInactiveGroupsKey, obj[this.savedHideInactiveGroupsKey]);
+                    this.ctx.workspaceState.update(this.savedHideAllKey, obj[this.savedHideAllKey]);
+                    vscode.window.showInformationMessage("Restored labeled bookmarks from file");
+                } else {
+                    vscode.window.showWarningMessage("Restored labeled bookmarks from file failed, version mismatch");
+                }
+            }
+        }
+
         this.hideInactiveGroups = this.ctx.workspaceState.get(this.savedHideInactiveGroupsKey) ?? false;
 
         this.hideAll = this.ctx.workspaceState.get(this.savedHideAllKey) ?? false;
