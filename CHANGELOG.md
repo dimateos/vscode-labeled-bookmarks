@@ -2,6 +2,10 @@
 
 All notable changes to the "vsc-labeled-bookmarks" extension will be documented in this file.
 
+## [1.1.12] - 2023-12-12
+
+- Add file storage
+
 ## [1.1.11] - 2022-07-11
 
 - Fix gutter icons that disappeared after latest VSCode rollout
