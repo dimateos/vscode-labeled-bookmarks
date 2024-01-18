@@ -3,7 +3,7 @@ import { TreeView } from 'vscode';
 import { Main } from '../main';
 import { BookmarkTreeItem } from './bookmark_tree_item';
 import { RateLimiter } from '../rate_limiter/rate_limiter';
-import { ActiveGroupTreeDataProvider } from './active_group_tree_data_rovider';
+import { ActiveGroupTreeDataProvider } from './active_group_tree_data_provider';
 import { InactiveGroupsTreeDataProvider } from './inactive_groups_tree_data_provider';
 import { ByFileTreeDataProvider } from './by_file_tree_data_provider';
 
