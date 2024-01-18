@@ -5,3 +5,4 @@ node_modules
 *vsix
 todo.txt
 resources/gutter_icons/*.svg
+.vscode/vsc-labeled-bookmarks.json

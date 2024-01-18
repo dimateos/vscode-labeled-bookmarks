@@ -142,6 +142,8 @@ export class Main implements BookmarkDataProvider, BookmarManager {
             obj[this.savedHideInactiveGroupsKey] = this.hideInactiveGroups;
             obj[this.savedHideAllKey] = this.hideAll;
             let json = JSON.stringify(obj);
+            // get directory path from savedBookmarksFilePath
+            fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
             fs.writeFileSync(this.savedBookmarksFilePath, json);
         }
     }
@@ -1509,7 +1511,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     private restoreSavedState() {
         // check if labeled file bookmarks are present
         if (this.savedBookmarksFilePath) {
-            // vscode.window.showInformationMessage(this.savedBookmarksFilePath);
+            vscode.window.showInformationMessage(this.savedBookmarksFilePath);
             if (fs.existsSync(this.savedBookmarksFilePath)) {
                 let data = fs.readFileSync(this.savedBookmarksFilePath, 'utf8');
                 let obj = JSON.parse(data);
