@@ -74,6 +74,8 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
     private decorationFactory: DecorationFactory;
 
+    private lastSaveTimestamp: number = 0;
+
     constructor(ctx: ExtensionContext, treeviewRefreshCallback: () => void) {
         this.ctx = ctx;
         this.logger = new Logger("vsc-labeled-bookmarks", true);
@@ -125,7 +127,22 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
         this.updateDecorations();
 
+        this.createWatcher();
+
         this.logger.log("constructor done");
+    }
+
+    private createWatcher() {
+        if (this.savedBookmarksFilePath) {
+            this.logger.log("creating file watcher for: " + this.savedBookmarksFilePath);
+            const watcher = vscode.workspace.createFileSystemWatcher(this.savedBookmarksFilePath, true, false, true);
+            watcher.onDidChange((e: vscode.Uri) => {
+                this.logger.log("file changed: " + e.fsPath);
+                if (this.lastSaveTimestamp < Date.now() - 1000) { // 1 second
+                    this.restoreSavedState();
+                }
+            });
+        }
     }
 
     private restoreSavedState() {
@@ -221,6 +238,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
             // get directory path from savedBookmarksFilePath
             fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
             fs.writeFileSync(this.savedBookmarksFilePath, json);
+            this.lastSaveTimestamp = Date.now();
         }
     }
 
