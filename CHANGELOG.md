@@ -2,6 +2,10 @@
 
 All notable changes to the "vsc-labeled-bookmarks" extension will be documented in this file.
 
+## [1.1.14] - 2024-02-19
+
+- Fix windows path
+
 ## [1.1.13] - 2024-01-26
 
 - Add file watcher for local file storage, sync between vscode windows
