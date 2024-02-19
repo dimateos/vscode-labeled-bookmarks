@@ -30,7 +30,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     // file storage
     public readonly savedBookmarksFileVersionKey = "fileVersion";
     public readonly savedBookmarksFileVersionValue = "1.0";
-    public readonly savedBookmarksFilePath = vscode.workspace.workspaceFolders?vscode.workspace.workspaceFolders[0].uri.path + "/.vscode/vsc-labeled-bookmarks.json":undefined;
+    public readonly savedBookmarksFilePath = vscode.workspace.workspaceFolders?vscode.workspace.workspaceFolders[0].uri.fsPath.replace(/\\/g, "/") + "/.vscode/vsc-labeled-bookmarks.json":undefined;
 
     public readonly savedBookmarksKey = "vscLabeledBookmarks.bookmarks";
     public readonly savedGroupsKey = "vscLabeledBookmarks.groups";
@@ -123,7 +123,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         this.statusBarItem.command = 'vsc-labeled-bookmarks.selectGroup';
         this.statusBarItem.show();
 
-        this.saveState();
+        // this.saveState();
 
         this.updateDecorations();
 
@@ -210,6 +210,10 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         this.activateGroup(activeGroupName);
     }
 
+    // private isEmpty() {
+    //     return this.bookmarks.length === 0 && (this.groups.length === 1 && this.groups[0].name === "default");
+    // }
+
     public saveState() {
         this.logger.log("saveState");
 
@@ -236,9 +240,10 @@ export class Main implements BookmarkDataProvider, BookmarManager {
             obj[this.savedHideAllKey] = this.hideAll;
             let json = JSON.stringify(obj, null, 4);
             // get directory path from savedBookmarksFilePath
+            this.logger.log("saving to file: " + this.savedBookmarksFilePath);
             fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
+            this.lastSaveTimestamp = Date.now(); // put it here to avoid reloading on watcher event
             fs.writeFileSync(this.savedBookmarksFilePath, json);
-            this.lastSaveTimestamp = Date.now();
         }
     }
 
