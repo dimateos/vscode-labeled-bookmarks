@@ -170,8 +170,8 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                 this.logger.log("LOAD restored labeled bookmarks from file");
             } else {
                 // ATM:: there are no breaking versions
-                vscode.window.showWarningMessage("LOAD restored labeled bookmarks from file failed, version mismatch?");
-                this.logger.log("LOAD restored labeled bookmarks from file failed, version mismatch?");
+                vscode.window.showWarningMessage("LOAD restored labeled bookmarks from file FAILED, version mismatch?");
+                this.logger.log("LOAD restored labeled bookmarks from file FAILED, version mismatch?");
             }
         }
 
@@ -191,7 +191,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
                 this.groups.sort(Group.sortByName);
             } catch (e) {
-                vscode.window.showErrorMessage("Restoring bookmark groups failed (" + e + ")");
+                vscode.window.showErrorMessage("LOAD Restoring bookmark groups failed (" + e + ")");
             }
         }
 
@@ -207,7 +207,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
                 this.bookmarks.sort(Bookmark.sortByLocation);
             } catch (e) {
-                vscode.window.showErrorMessage("Restoring bookmarks failed (" + e + ")");
+                vscode.window.showErrorMessage("LOAD Restoring bookmarks failed (" + e + ")");
             }
         }
 
@@ -249,8 +249,9 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         let json = JSON.stringify(obj, null, 4);
         if (this.isEmpty()) {
             if (fs.existsSync(this.savedBookmarksFilePath)) {
-                this.logger.log("empty bookmark. deleting file: " + this.savedBookmarksFilePath);
+                this.logger.log("SAVE empty bookmark -> deleting file");
                 fs.unlinkSync(this.savedBookmarksFilePath);
+
                 // delete .vscode if empty
                 let dir = this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/"));
                 if (fs.existsSync(dir)) {
@@ -262,8 +263,6 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                 }
             }
         } else {
-            // get directory path from savedBookmarksFilePath
-            this.logger.log("saving to file: " + this.savedBookmarksFilePath);
             fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
             this.lastSaveTimestamp = Date.now(); // put it here to avoid reloading on watcher event
             fs.writeFileSync(this.savedBookmarksFilePath, json);
@@ -679,7 +678,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
             if (newName.length > this.maxGroupNameLength) {
                 vscode.window.showErrorMessage(
-                    "Choose a maximum " +
+                    "ERROR: Choose a maximum " +
                     this.maxGroupNameLength +
                     " character long group name."
                 );
@@ -689,7 +688,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
             if (typeof this.groups.find(g => {
                 return g !== group && g.name === newName;
             }) !== "undefined") {
-                vscode.window.showErrorMessage("The entered bookmark group name is already in use");
+                vscode.window.showErrorMessage("ERROR: The entered bookmark group name is already in use");
                 return;
             }
 
@@ -816,7 +815,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
             if (groupName.length > this.maxGroupNameLength) {
                 vscode.window.showErrorMessage(
-                    "Choose a maximum " +
+                    "ERROR: Choose a maximum " +
                     this.maxGroupNameLength +
                     " character long group name."
                 );
@@ -1253,7 +1252,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
             if (groupName.length > this.maxGroupNameLength) {
                 vscode.window.showErrorMessage(
-                    "Choose a maximum " +
+                    "ERROR: Choose a maximum " +
                     this.maxGroupNameLength +
                     " character long group name."
                 );

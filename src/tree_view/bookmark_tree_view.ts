@@ -155,7 +155,7 @@ export class BookmarkTreeView {
             }
         } catch (e) {
             console.log(e);
-            vscode.window.showErrorMessage("Bookmark tree view init error " + e);
+            vscode.window.showErrorMessage("ERROR: Bookmark tree view init error " + e);
         }
     }
 
