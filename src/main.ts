@@ -80,8 +80,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     constructor(ctx: ExtensionContext, treeviewRefreshCallback: () => void) {
         this.ctx = ctx;
         this.logger = new Logger("vsc-labeled-bookmarks", true);
-
-        this.logger.log("constructor");
+        this.logger.log("CONSTRUCTOR");
 
         this.treeViewRefreshCallback = treeviewRefreshCallback;
 
@@ -130,44 +129,49 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
         this.createWatcher();
 
-        this.logger.log("constructor done");
+        this.logger.log("CONSTRUCTOR done");
     }
 
     private createWatcher() {
-        if (this.savedBookmarksFilePath) {
-            this.logger.log("creating file watcher for: " + this.savedBookmarksFilePath);
-            const watcher = vscode.workspace.createFileSystemWatcher(this.savedBookmarksFilePath, true, false, true);
-            watcher.onDidChange((e: vscode.Uri) => {
-                this.logger.log("file changed: " + e.fsPath);
-                if (this.lastSaveTimestamp < Date.now() - this.savedBookmarksDelay) {
-                    this.restoreSavedState();
-                }
-            });
+        if (!this.savedBookmarksFilePath) {
+            this.logger.log("WATCHER has no target path...");
+            return
         }
+
+        this.logger.log("WATCHER for " + this.savedBookmarksFilePath + " (" + this.savedBookmarksDelay + ")");
+        const watcher = vscode.workspace.createFileSystemWatcher(this.savedBookmarksFilePath, true, false, true);
+        watcher.onDidChange((e: vscode.Uri) => {
+            this.logger.log("WATCHER file changed: " + e.fsPath);
+            if (this.lastSaveTimestamp < Date.now() - this.savedBookmarksDelay) {
+                this.restoreSavedState();
+            }
+        });
     }
 
     private restoreSavedState() {
-        this.logger.log("restoring saved state");
+        if (!this.savedBookmarksFilePath) {
+            this.logger.log("LOAD has no target path...");
+            return
+        }
+        this.logger.log("LOAD from " + this.savedBookmarksFilePath);
 
-        // check if labeled file bookmarks are present
-        if (this.savedBookmarksFilePath) {
-            // vscode.window.showInformationMessage(this.savedBookmarksFilePath);
-            if (fs.existsSync(this.savedBookmarksFilePath)) {
-                let data = fs.readFileSync(this.savedBookmarksFilePath, 'utf8');
-                let obj = JSON.parse(data);
-                // verify and load back to workspaceState
-                if (obj[this.savedBookmarksFileVersionKey] === this.savedBookmarksFileVersionValue) {
-                    this.ctx.workspaceState.update(this.savedBookmarksKey, obj[this.savedBookmarksKey]);
-                    this.ctx.workspaceState.update(this.savedGroupsKey, obj[this.savedGroupsKey]);
-                    this.ctx.workspaceState.update(this.savedActiveGroupKey, obj[this.savedActiveGroupKey]);
-                    this.ctx.workspaceState.update(this.savedHideInactiveGroupsKey, obj[this.savedHideInactiveGroupsKey]);
-                    this.ctx.workspaceState.update(this.savedHideAllKey, obj[this.savedHideAllKey]);
-                    vscode.window.showInformationMessage("Restored labeled bookmarks from file");
-                    this.logger.log("restored labeled bookmarks from file");
-                } else {
-                    vscode.window.showWarningMessage("Restored labeled bookmarks from file failed, version mismatch");
-                    this.logger.log("restored labeled bookmarks from file failed, version mismatch");
-                }
+        // vscode.window.showInformationMessage(this.savedBookmarksFilePath);
+        if (fs.existsSync(this.savedBookmarksFilePath)) {
+            let data = fs.readFileSync(this.savedBookmarksFilePath, 'utf8');
+            let obj = JSON.parse(data);
+            // verify and load back to workspaceState
+            if (obj[this.savedBookmarksFileVersionKey] === this.savedBookmarksFileVersionValue) {
+                this.ctx.workspaceState.update(this.savedBookmarksKey, obj[this.savedBookmarksKey]);
+                this.ctx.workspaceState.update(this.savedGroupsKey, obj[this.savedGroupsKey]);
+                this.ctx.workspaceState.update(this.savedActiveGroupKey, obj[this.savedActiveGroupKey]);
+                this.ctx.workspaceState.update(this.savedHideInactiveGroupsKey, obj[this.savedHideInactiveGroupsKey]);
+                this.ctx.workspaceState.update(this.savedHideAllKey, obj[this.savedHideAllKey]);
+                vscode.window.showInformationMessage("LOAD restored labeled bookmarks from file");
+                this.logger.log("LOAD restored labeled bookmarks from file");
+            } else {
+                // ATM:: there are no breaking versions
+                vscode.window.showWarningMessage("LOAD restored labeled bookmarks from file failed, version mismatch?");
+                this.logger.log("LOAD restored labeled bookmarks from file failed, version mismatch?");
             }
         }
 
@@ -216,7 +220,11 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     }
 
     public saveState() {
-        this.logger.log("saveState");
+        if (!this.savedBookmarksFilePath) {
+            this.logger.log("SAVE has no target path...");
+            return
+        }
+        this.logger.log("SAVE to " + this.savedBookmarksFilePath);
 
         let serializedGroups = this.groups.map(group => SerializableGroup.fromGroup(group));
         this.ctx.workspaceState.update(this.savedGroupsKey, serializedGroups);
@@ -230,37 +238,35 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
         this.updateStatusBar();
 
-        // save to file
-        if (this.savedBookmarksFilePath) {
-            let obj: Record<string, any> = {};
-            obj[this.savedBookmarksFileVersionKey] = this.savedBookmarksFileVersionValue;
-            obj[this.savedGroupsKey] = serializedGroups;
-            obj[this.savedBookmarksKey] = serializedBookmarks;
-            obj[this.savedActiveGroupKey] = this.activeGroup.name;
-            obj[this.savedHideInactiveGroupsKey] = this.hideInactiveGroups;
-            obj[this.savedHideAllKey] = this.hideAll;
-            let json = JSON.stringify(obj, null, 4);
-            if (this.isEmpty()) {
-                if (fs.existsSync(this.savedBookmarksFilePath)) {
-                    this.logger.log("empty bookmark. deleting file: " + this.savedBookmarksFilePath);
-                    fs.unlinkSync(this.savedBookmarksFilePath);
-                    // delete .vscode if empty
-                    let dir = this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/"));
-                    if (fs.existsSync(dir)) {
-                        let files = fs.readdirSync(dir);
-                        if (files.length === 0) {
-                            this.logger.log("deleting directory: " + dir);
-                            fs.rmdirSync(dir);
-                        }
+        // save dict
+        let obj: Record<string, any> = {};
+        obj[this.savedBookmarksFileVersionKey] = this.savedBookmarksFileVersionValue;
+        obj[this.savedGroupsKey] = serializedGroups;
+        obj[this.savedBookmarksKey] = serializedBookmarks;
+        obj[this.savedActiveGroupKey] = this.activeGroup.name;
+        obj[this.savedHideInactiveGroupsKey] = this.hideInactiveGroups;
+        obj[this.savedHideAllKey] = this.hideAll;
+        let json = JSON.stringify(obj, null, 4);
+        if (this.isEmpty()) {
+            if (fs.existsSync(this.savedBookmarksFilePath)) {
+                this.logger.log("empty bookmark. deleting file: " + this.savedBookmarksFilePath);
+                fs.unlinkSync(this.savedBookmarksFilePath);
+                // delete .vscode if empty
+                let dir = this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/"));
+                if (fs.existsSync(dir)) {
+                    let files = fs.readdirSync(dir);
+                    if (files.length === 0) {
+                        this.logger.log("deleting directory: " + dir);
+                        fs.rmdirSync(dir);
                     }
                 }
-            } else {
-                // get directory path from savedBookmarksFilePath
-                this.logger.log("saving to file: " + this.savedBookmarksFilePath);
-                fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
-                this.lastSaveTimestamp = Date.now(); // put it here to avoid reloading on watcher event
-                fs.writeFileSync(this.savedBookmarksFilePath, json);
             }
+        } else {
+            // get directory path from savedBookmarksFilePath
+            this.logger.log("saving to file: " + this.savedBookmarksFilePath);
+            fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
+            this.lastSaveTimestamp = Date.now(); // put it here to avoid reloading on watcher event
+            fs.writeFileSync(this.savedBookmarksFilePath, json);
         }
     }
 
@@ -907,7 +913,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                     }
                 }
             }
-            vscode.window.showWarningMessage("All bookmarks are broken, time for some cleanup");
+            vscode.window.showWarningMessage("ERROR: All bookmarks are broken, time for some cleanup");
         }
 
         return firstCandidate;
@@ -968,7 +974,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                     }
                 }
             }
-            vscode.window.showWarningMessage("All bookmarks are broken, time for some cleanup");
+            vscode.window.showWarningMessage("ERROR: All bookmarks are broken, time for some cleanup");
         }
 
         return firstCandidate;
@@ -1139,12 +1145,12 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                         textEditor.selection = currentSelection;
                         textEditor.revealRange(new Range(currentSelection.start, currentSelection.end));
                     } catch (e) {
-                        vscode.window.showWarningMessage("Failed to navigate to origin (1): " + e);
+                        vscode.window.showWarningMessage("ERROR: Failed to navigate to origin (1): " + e);
                         return;
                     }
                 },
                 rejectReason => {
-                    vscode.window.showWarningMessage("Failed to navigate to origin (2): " + rejectReason.message);
+                    vscode.window.showWarningMessage("ERROR: Failed to navigate to origin (2): " + rejectReason.message);
                 }
             );
         });
@@ -1369,12 +1375,12 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                         textEditor.selection = currentSelection;
                         textEditor.revealRange(new Range(currentSelection.start, currentSelection.end));
                     } catch (e) {
-                        vscode.window.showWarningMessage("Failed to navigate to origin (1): " + e);
+                        vscode.window.showWarningMessage("ERROR: Failed to navigate to origin (1): " + e);
                         return;
                     }
                 },
                 rejectReason => {
-                    vscode.window.showWarningMessage("Failed to navigate to origin (2): " + rejectReason.message);
+                    vscode.window.showWarningMessage("ERROR: Failed to navigate to origin (2): " + rejectReason.message);
                 }
             );
         });
@@ -1414,7 +1420,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         );
 
         if (pickItems.length === 0) {
-            vscode.window.showWarningMessage("There is no other group to move bookmarks into");
+            vscode.window.showWarningMessage("ERROR: There is no other group to move bookmarks into");
             return;
         }
 
@@ -1479,7 +1485,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     }
 
     public readSettings() {
-        this.logger.log("reading settings");
+        this.logger.log("SETTINGS parsing");
 
         let defaultDefaultShape = "bookmark";
 
@@ -1493,7 +1499,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                     this.colors.set(index, this.decorationFactory.normalizeColorFormat(value));
                 }
             } catch (e) {
-                vscode.window.showWarningMessage("Error reading bookmark color setting");
+                vscode.window.showWarningMessage("SETTINGS: Error reading bookmark color setting");
             }
         }
 
@@ -1505,7 +1511,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                     this.unicodeMarkers.set(index, value);
                 }
             } catch (e) {
-                vscode.window.showWarningMessage("Error reading bookmark unicode marker setting");
+                vscode.window.showWarningMessage("SETTINGS: Error reading bookmark unicode marker setting");
             }
         }
 
@@ -1514,7 +1520,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
             if (this.shapes.has(configDefaultShape)) {
                 this.defaultShape = configDefaultShape;
             } else {
-                vscode.window.showWarningMessage("Error reading bookmark default shape setting, using default");
+                vscode.window.showWarningMessage("SETTINGS: Error reading bookmark default shape setting, using default");
                 this.defaultShape = defaultDefaultShape;
             }
         } else {
@@ -1773,14 +1779,14 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                     textEditor.revealRange(range);
                 } catch (e) {
                     bookmark.failedJump = true;
-                    vscode.window.showWarningMessage("Failed to navigate to bookmark (3): " + e);
+                    vscode.window.showWarningMessage("ERROR: Failed to navigate to bookmark (3): " + e);
                     return;
                 }
                 bookmark.failedJump = false;
             },
             rejectReason => {
                 bookmark.failedJump = true;
-                vscode.window.showWarningMessage("Failed to navigate to bookmark (2): " + rejectReason.message);
+                vscode.window.showWarningMessage("ERROR: Failed to navigate to bookmark (2): " + rejectReason.message);
             }
         );
     }
