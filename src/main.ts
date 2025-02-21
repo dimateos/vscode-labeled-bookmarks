@@ -48,7 +48,8 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
     public readonly maxGroupNameLength = 40;
 
-    public readonly defaultGroupName: string;
+    public readonly defaultGroupName = "_local";
+    public readonly externalGroupName = "_external";
 
     public groups: Array<Group>;
     private bookmarks: Array<Bookmark>;
@@ -89,8 +90,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
         this.bookmarks = new Array<Bookmark>();
         this.groups = new Array<Group>();
-        this.defaultGroupName = "default";
-        this.activeGroup = new Group(this.defaultGroupName, this.fallbackColor, this.defaultShape, "", this.decorationFactory);
+        this.activeGroup = new Group(this.defaultGroupName, this.fallbackColor, this.defaultShape, "", this.decorationFactory)
 
         this.colors = new Map<string, string>();
         this.unicodeMarkers = new Map<string, string>();
@@ -103,39 +103,38 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         ]);
 
         this.removedDecorations = new Map<TextEditorDecorationType, boolean>();
-
         this.tempDocumentBookmarks = new Map<string, Array<Bookmark>>();
         this.tempGroupBookmarks = new Map<Group, Array<Bookmark>>();
         this.tempDocumentDecorations = new Map<string, Map<TextEditorDecorationType, Array<Range>>>();
 
         this.readSettings();
-
         if (this.colors.size < 1) {
             this.colors.set(this.fallbackColorName, this.decorationFactory.normalizeColorFormat(this.fallbackColor));
         }
-
         this.hideInactiveGroups = false;
         this.hideAll = false;
 
-        this.restoreSavedState();
+        // loading / initial
+        let loaded = this.loadState()
+        if (!loaded) {
+            this.groups.push( new Group(this.defaultGroupName, this.fallbackColor, this.defaultShape, "", this.decorationFactory));
+            this.activeGroup = this.groups[this.groups.length-1]
+            this.saveState();
+        }
 
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1);
         this.statusBarItem.command = 'vsc-labeled-bookmarks.selectGroup';
         this.statusBarItem.show();
 
-        this.saveState();
-
         this.updateDecorations();
-
         this.createWatcher();
-
         this.logger.log("CONSTRUCTOR done");
     }
 
     private createWatcher() {
         if (!this.savedBookmarksFilePath) {
             this.logger.log("WATCHER has no target path...");
-            return
+            return false
         }
 
         this.logger.log("WATCHER for " + this.savedBookmarksFilePath + " (" + this.savedBookmarksDelay + ")");
@@ -143,43 +142,47 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         watcher.onDidChange((e: vscode.Uri) => {
             this.logger.log("WATCHER file changed: " + e.fsPath);
             if (this.lastSaveTimestamp < Date.now() - this.savedBookmarksDelay) {
-                this.restoreSavedState();
+                this.loadState();
             }
         });
+
+        return true
     }
 
-    private restoreSavedState() {
+    private loadState() {
         if (!this.savedBookmarksFilePath) {
             this.logger.log("LOAD has no target path...");
-            return
+            return false
         }
         this.logger.log("LOAD from " + this.savedBookmarksFilePath);
 
-        if (fs.existsSync(this.savedBookmarksFilePath)) {
-            let data = fs.readFileSync(this.savedBookmarksFilePath, 'utf8');
-            let obj = JSON.parse(data);
-            // verify and load back to workspaceState
-            if (obj[this.savedBookmarksFileVersionKey] === this.savedBookmarksFileVersionValue) {
-                this.ctx.workspaceState.update(this.savedBookmarksKey, obj[this.savedBookmarksKey]);
-                this.ctx.workspaceState.update(this.savedGroupsKey, obj[this.savedGroupsKey]);
-                this.ctx.workspaceState.update(this.savedActiveGroupKey, obj[this.savedActiveGroupKey]);
-                this.ctx.workspaceState.update(this.savedHideInactiveGroupsKey, obj[this.savedHideInactiveGroupsKey]);
-                this.ctx.workspaceState.update(this.savedHideAllKey, obj[this.savedHideAllKey]);
-                //vscode.window.showInformationMessage("LOAD restored labeled bookmarks from file");
-                this.logger.log("LOAD restored labeled bookmarks from file");
-            } else {
-                // ATM:: there are no breaking versions
-                vscode.window.showWarningMessage("LOAD restored labeled bookmarks from file FAILED, version mismatch?");
-                this.logger.log("LOAD restored labeled bookmarks from file FAILED, version mismatch?");
-            }
+        if (!fs.existsSync(this.savedBookmarksFilePath)) {
+            this.logger.log("LOAD file no found...");
+            return false
+        }
+
+        // read
+        let data = fs.readFileSync(this.savedBookmarksFilePath, 'utf8');
+        let obj = JSON.parse(data);
+        if (obj[this.savedBookmarksFileVersionKey] === this.savedBookmarksFileVersionValue) {
+            this.ctx.workspaceState.update(this.savedBookmarksKey, obj[this.savedBookmarksKey]);
+            this.ctx.workspaceState.update(this.savedGroupsKey, obj[this.savedGroupsKey]);
+            this.ctx.workspaceState.update(this.savedActiveGroupKey, obj[this.savedActiveGroupKey]);
+            this.ctx.workspaceState.update(this.savedHideInactiveGroupsKey, obj[this.savedHideInactiveGroupsKey]);
+            this.ctx.workspaceState.update(this.savedHideAllKey, obj[this.savedHideAllKey]);
+            //vscode.window.showInformationMessage("LOAD restored labeled bookmarks from file");
+            this.logger.log("LOAD restored labeled bookmarks from file");
+        } else {
+            // ATM:: there are no breaking versions
+            vscode.window.showWarningMessage("LOAD restored labeled bookmarks from file FAILED, version mismatch?");
+            this.logger.log("LOAD restored labeled bookmarks from file FAILED, version mismatch?");
+            return false
         }
 
         this.hideInactiveGroups = this.ctx.workspaceState.get(this.savedHideInactiveGroupsKey) ?? false;
-
         this.hideAll = this.ctx.workspaceState.get(this.savedHideAllKey) ?? false;
 
         let activeGroupName: string = this.ctx.workspaceState.get(this.savedActiveGroupKey) ?? this.defaultGroupName;
-
         let serializedGroups: Array<SerializableGroup> | undefined = this.ctx.workspaceState.get(this.savedGroupsKey);
         this.groups = new Array<Group>();
         if (typeof serializedGroups !== "undefined") {
@@ -212,16 +215,17 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
         this.resetTempLists();
         this.activateGroup(activeGroupName);
+        return true
     }
 
     private isEmpty() {
-        return this.bookmarks.length === 0 && (this.groups.length === 1 && this.groups[0].name === "default");
+        return this.bookmarks.length === 0 && (this.groups.length === 1 && this.groups[0].name === this.defaultGroupName);
     }
 
     public saveState() {
         if (!this.savedBookmarksFilePath) {
             this.logger.log("SAVE has no target path...");
-            return
+            return false
         }
         this.logger.log("SAVE to " + this.savedBookmarksFilePath);
 
@@ -234,8 +238,6 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         this.ctx.workspaceState.update(this.savedActiveGroupKey, this.activeGroup.name);
         this.ctx.workspaceState.update(this.savedHideInactiveGroupsKey, this.hideInactiveGroups);
         this.ctx.workspaceState.update(this.savedHideAllKey, this.hideAll);
-
-        this.updateStatusBar();
 
         // save dict
         let obj: Record<string, any> = {};
@@ -261,11 +263,13 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                     }
                 }
             }
-        } else {
-            fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
-            this.lastSaveTimestamp = Date.now(); // put it here to avoid reloading on watcher event
-            fs.writeFileSync(this.savedBookmarksFilePath, json);
+            return false
         }
+
+        fs.mkdirSync(this.savedBookmarksFilePath.substring(0, this.savedBookmarksFilePath.lastIndexOf("/")), { recursive: true });
+        this.lastSaveTimestamp = Date.now(); // put it here to avoid reloading on watcher event
+        fs.writeFileSync(this.savedBookmarksFilePath, json);
+        return true
     }
 
     public handleDecorationRemoved(decoration: TextEditorDecorationType) {
