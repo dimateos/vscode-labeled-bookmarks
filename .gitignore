@@ -1,8 +1,11 @@
 out
 dist
 node_modules
+
+resources/gutter_icons/*.svg
 .vscode-test/
 *vsix
+
 todo.txt
-resources/gutter_icons/*.svg
-.vscode/vsc-labeled-bookmarks.json
+.vscode/bookmarks.json
+.vscode/bookmarks-labeled.json

@@ -1,5 +1,7 @@
 # vsc-labeled-bookmarks README
 
+> FORK: see changelog
+
 Bookmarks with customizable icons, colors and other visuals, organized into groups between which you can switch, keyboard shortcut for most functions.
 
 ![Editor View](resources/editor.gif)
