@@ -6,6 +6,7 @@ All notable changes to the "vsc-labeled-bookmarks" extension will be documented 
 
 - CUSTOM: delay, path, etc (still hardcoded)
 - DEV: a bit better logging
+- relative workspace paths
 
 ## [1.1.15] - 2024-02-20
 

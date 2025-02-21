@@ -1,7 +1,8 @@
 import { DecorationFactory } from "./decoration_factory";
-import { TextEditorDecorationType, Uri } from "vscode";
+import { TextEditorDecorationType, Uri, workspace } from "vscode";
 import { SerializableBookmark } from "./serializable_bookmark";
 import { Group } from "./group";
+import * as path from "path";
 
 export class Bookmark {
     public fsPath: string;
@@ -46,8 +47,15 @@ export class Bookmark {
         groupGetter: (groupName: string) => Group,
         decorationFactory: DecorationFactory
     ): Bookmark {
+        const workspaceFolder = workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+        // Convert to absolute if the fsPath is relative to the workspace
+        const absolutePath = workspaceFolder && !path.isAbsolute(serialized.fsPath)
+            ? path.join(workspaceFolder, serialized.fsPath)
+            : serialized.fsPath;
+
         return new Bookmark(
-            serialized.fsPath,
+            absolutePath,
             serialized.lineNumber,
             serialized.characterNumber,
             serialized.label,
