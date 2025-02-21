@@ -155,7 +155,6 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         }
         this.logger.log("LOAD from " + this.savedBookmarksFilePath);
 
-        // vscode.window.showInformationMessage(this.savedBookmarksFilePath);
         if (fs.existsSync(this.savedBookmarksFilePath)) {
             let data = fs.readFileSync(this.savedBookmarksFilePath, 'utf8');
             let obj = JSON.parse(data);
@@ -166,7 +165,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                 this.ctx.workspaceState.update(this.savedActiveGroupKey, obj[this.savedActiveGroupKey]);
                 this.ctx.workspaceState.update(this.savedHideInactiveGroupsKey, obj[this.savedHideInactiveGroupsKey]);
                 this.ctx.workspaceState.update(this.savedHideAllKey, obj[this.savedHideAllKey]);
-                vscode.window.showInformationMessage("LOAD restored labeled bookmarks from file");
+                //vscode.window.showInformationMessage("LOAD restored labeled bookmarks from file");
                 this.logger.log("LOAD restored labeled bookmarks from file");
             } else {
                 // ATM:: there are no breaking versions
@@ -1407,7 +1406,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
             }
         }
 
-        vscode.window.showInformationMessage("Cleared broken bookmark flags: " + clearedFlagCount);
+        vscode.window.showInformationMessage("ERROR: Cleared broken bookmark flags: " + clearedFlagCount);
         this.saveState();
     }
 
