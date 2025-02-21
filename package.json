@@ -2,7 +2,7 @@
   "name": "labeled-bookmarks",
   "displayName": "Labeled Bookmarks",
   "description": "Bookmarks, multiple groups, customizable visuals, .json import/export",
-  "version": "1.1.16",
+  "version": "1.1.17",
   "publisher": "dimateos",
   "author": "koalamer, trichimtrich, dimateos",
   "icon": "resources/vsc-labeled-bookmarks-logo.png",
