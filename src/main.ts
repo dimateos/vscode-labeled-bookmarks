@@ -30,7 +30,8 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     // file storage
     public readonly savedBookmarksFileVersionKey = "fileVersion";
     public readonly savedBookmarksFileVersionValue = "1.0";
-    public readonly savedBookmarksFilePath = vscode.workspace.workspaceFolders?vscode.workspace.workspaceFolders[0].uri.fsPath.replace(/\\/g, "/") + "/.vscode/vsc-labeled-bookmarks.json":undefined;
+    public readonly savedBookmarksFilePath = vscode.workspace.workspaceFolders?vscode.workspace.workspaceFolders[0].uri.fsPath.replace(/\\/g, "/") + "/.vscode/bookmarks-labeled.json":undefined;
+    public readonly savedBookmarksDelay = 2500;
 
     public readonly savedBookmarksKey = "vscLabeledBookmarks.bookmarks";
     public readonly savedGroupsKey = "vscLabeledBookmarks.groups";
@@ -138,7 +139,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
             const watcher = vscode.workspace.createFileSystemWatcher(this.savedBookmarksFilePath, true, false, true);
             watcher.onDidChange((e: vscode.Uri) => {
                 this.logger.log("file changed: " + e.fsPath);
-                if (this.lastSaveTimestamp < Date.now() - 1000) { // 1 second
+                if (this.lastSaveTimestamp < Date.now() - this.savedBookmarksDelay) {
                     this.restoreSavedState();
                 }
             });

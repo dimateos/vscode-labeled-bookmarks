@@ -2,6 +2,10 @@
 
 All notable changes to the "vsc-labeled-bookmarks" extension will be documented in this file.
 
+## [1.1.16] - 2025-02-20
+
+- CUSTOM: delay, path, etc (still hardcoded)
+
 ## [1.1.15] - 2024-02-20
 
 - auto delete bookmark file + vscode dir if empty
