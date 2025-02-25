@@ -8,6 +8,13 @@ import { BookmarkTreeItem } from './tree_view/bookmark_tree_item';
 let main: Main;
 let treeView: BookmarkTreeView;
 
+export function get_main() {
+	if (!main) {
+        throw new Error("Main instance is not initialized yet!");
+    }
+	return main;
+}
+
 export function activate(context: ExtensionContext) {
 	treeView = new BookmarkTreeView();
 	main = new Main(context, treeView.refreshCallback.bind(treeView));

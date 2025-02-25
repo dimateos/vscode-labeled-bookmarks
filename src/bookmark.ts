@@ -1,7 +1,8 @@
 import { DecorationFactory } from "./decoration_factory";
 import { TextEditorDecorationType, Uri, workspace } from "vscode";
 import { SerializableBookmark } from "./serializable_bookmark";
-import { Group } from "./group";
+import { Group, externalGroupName } from "./group";
+import { get_main } from "./extension";
 import * as path from "path";
 const workspaceFolder = workspace.workspaceFolders?.[0]?.uri.fsPath;
 
@@ -36,16 +37,23 @@ export class Bookmark {
         this.lineText = lineText;
         this.failedJump = false;
         this.isLineNumberChanged = false;
-        this.group = group;
         this.decorationFactory = decorationFactory;
         this.ownDecoration = null;
         this.bookmarkDecorationUpdatedHandler = (bookmark: Bookmark) => { return; };
         this.decorationRemovedHandler = (decoration: TextEditorDecorationType) => { return; };
+
+        // WIP:: auto group switch
+        let CFG_AUTO_GROUP_SWITCH = true
+        if (CFG_AUTO_GROUP_SWITCH && workspaceFolder && !this.fsPath.startsWith(workspaceFolder)) {
+            this.group = get_main().getGroupByName(externalGroupName);
+        }
+        else {
+            this.group = group;
+        }
     }
 
     public static fromSerializableBookMark(
         serialized: SerializableBookmark,
-        groupGetter: (groupName: string) => Group,
         decorationFactory: DecorationFactory
     ): Bookmark {
 
@@ -60,7 +68,7 @@ export class Bookmark {
             serialized.characterNumber,
             serialized.label,
             serialized.lineText,
-            groupGetter(serialized.groupName),
+            get_main().getGroupByName(serialized.groupName),
             decorationFactory
         );
     }
