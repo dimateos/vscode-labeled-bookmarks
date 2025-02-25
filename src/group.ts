@@ -2,6 +2,10 @@ import { TextEditorDecorationType, Uri } from 'vscode';
 import { DecorationFactory } from "./decoration_factory";
 import { SerializableGroup } from "./serializable_group";
 
+export const maxGroupNameLength = 40;
+export const defaultGroupName = "_local";
+export const externalGroupName = "_external";
+
 export class Group {
     static readonly inactiveTransparency: string = "33";
 

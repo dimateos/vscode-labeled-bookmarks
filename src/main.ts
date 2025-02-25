@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { Group } from "./group";
+import { Group, maxGroupNameLength, defaultGroupName, externalGroupName } from "./group";
 import {
     ExtensionContext,
     FileDeleteEvent, FileRenameEvent,
@@ -46,11 +46,6 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     public readonly configOverviewRulerLane = "overviewRulerLane";
     public readonly configLineEndLabelType = "lineEndLabelType";
 
-    public readonly maxGroupNameLength = 40;
-
-    public readonly defaultGroupName = "_local";
-    public readonly externalGroupName = "_external";
-
     public groups: Array<Group>;
     private bookmarks: Array<Bookmark>;
 
@@ -90,7 +85,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
 
         this.bookmarks = new Array<Bookmark>();
         this.groups = new Array<Group>();
-        this.activeGroup = new Group(this.defaultGroupName, this.fallbackColor, this.defaultShape, "", this.decorationFactory)
+        this.activeGroup = new Group(defaultGroupName, this.fallbackColor, this.defaultShape, "", this.decorationFactory)
 
         this.colors = new Map<string, string>();
         this.unicodeMarkers = new Map<string, string>();
@@ -117,7 +112,8 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         // loading / initial
         let loaded = this.loadState()
         if (!loaded) {
-            this.groups.push( new Group(this.defaultGroupName, this.fallbackColor, this.defaultShape, "", this.decorationFactory));
+            this.groups.push( new Group(externalGroupName, "00dd00ff", this.defaultShape, "", this.decorationFactory));
+            this.groups.push( new Group(defaultGroupName, this.fallbackColor, this.defaultShape, "", this.decorationFactory));
             this.activeGroup = this.groups[this.groups.length-1]
             this.saveState();
         }
@@ -182,7 +178,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         this.hideInactiveGroups = this.ctx.workspaceState.get(this.savedHideInactiveGroupsKey) ?? false;
         this.hideAll = this.ctx.workspaceState.get(this.savedHideAllKey) ?? false;
 
-        let activeGroupName: string = this.ctx.workspaceState.get(this.savedActiveGroupKey) ?? this.defaultGroupName;
+        let activeGroupName: string = this.ctx.workspaceState.get(this.savedActiveGroupKey) ?? defaultGroupName;
         let serializedGroups: Array<SerializableGroup> | undefined = this.ctx.workspaceState.get(this.savedGroupsKey);
         this.groups = new Array<Group>();
         if (typeof serializedGroups !== "undefined") {
@@ -219,7 +215,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
     }
 
     private isEmpty() {
-        return this.bookmarks.length === 0 && (this.groups.length === 1 && this.groups[0].name === this.defaultGroupName);
+        return this.bookmarks.length === 0 && (this.groups.length === 1 && this.groups[0].name === defaultGroupName);
     }
 
     public saveState() {
@@ -679,10 +675,10 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                 return;
             }
 
-            if (newName.length > this.maxGroupNameLength) {
+            if (newName.length > maxGroupNameLength) {
                 vscode.window.showErrorMessage(
                     "ERROR: Choose a maximum " +
-                    this.maxGroupNameLength +
+                    maxGroupNameLength +
                     " character long group name."
                 );
                 return;
@@ -816,10 +812,10 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                 return;
             }
 
-            if (groupName.length > this.maxGroupNameLength) {
+            if (groupName.length > maxGroupNameLength) {
                 vscode.window.showErrorMessage(
                     "ERROR: Choose a maximum " +
-                    this.maxGroupNameLength +
+                    maxGroupNameLength +
                     " character long group name."
                 );
                 return;
@@ -1253,10 +1249,10 @@ export class Main implements BookmarkDataProvider, BookmarManager {
                 return;
             }
 
-            if (groupName.length > this.maxGroupNameLength) {
+            if (groupName.length > maxGroupNameLength) {
                 vscode.window.showErrorMessage(
                     "ERROR: Choose a maximum " +
-                    this.maxGroupNameLength +
+                    maxGroupNameLength +
                     " character long group name."
                 );
                 return;
@@ -1312,7 +1308,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         }
 
         if (this.groups.length === 0) {
-            this.activateGroup(this.defaultGroupName);
+            this.activateGroup(defaultGroupName);
         } else if (wasActiveGroupDeleted) {
             this.activateGroup(this.groups[0].name);
         }

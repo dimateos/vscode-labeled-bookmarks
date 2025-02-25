@@ -1,6 +1,7 @@
 import { Bookmark } from "./bookmark";
 import { workspace } from "vscode";
 import * as path from "path";
+const workspaceFolder = workspace.workspaceFolders?.[0]?.uri.fsPath;
 
 export class SerializableBookmark {
     fsPath: string;
@@ -29,7 +30,6 @@ export class SerializableBookmark {
     }
 
     public static fromBookmark(bookmark: Bookmark): SerializableBookmark {
-        const workspaceFolder = workspace.workspaceFolders?.[0]?.uri.fsPath;
 
         // Convert to relative only if the file is inside the workspace
         const relativePath = workspaceFolder && bookmark.fsPath.startsWith(workspaceFolder)
