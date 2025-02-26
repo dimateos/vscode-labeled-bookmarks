@@ -199,7 +199,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         if (typeof serializedBookmarks !== "undefined") {
             try {
                 for (let sb of serializedBookmarks) {
-                    let bookmark = Bookmark.fromSerializableBookMark(sb, this.getGroupByName.bind(this), this.decorationFactory);
+                    let bookmark = Bookmark.fromSerializableBookMark(sb, this.decorationFactory);
                     this.addNewDecoratedBookmark(bookmark);
                 }
 
@@ -315,7 +315,7 @@ export class Main implements BookmarkDataProvider, BookmarManager {
         this.removedDecorations.clear();
     }
 
-    private getGroupByName(groupName: string): Group {
+    public getGroupByName(groupName: string): Group {
         for (let g of this.groups) {
             if (g.name === groupName) {
                 return g;
